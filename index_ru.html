@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="ru" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Покупки">
+<meta name="theme-color" content="#2d6a4f">
+<link rel="manifest" href="manifest.json">
+<title>🛒 Список покупок</title>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{
+  --bg:#f0f7f4;--surface:#fff;--surface2:#f7fbf9;--border:#d4e8de;
+  --text:#1a2e24;--muted:#6b9080;
+  --green:#2d6a4f;--green-l:#d8f3dc;--green-m:#52b788;
+  --red:#c0392b;--red-l:#fdf0ee;
+  --yellow:#d4830a;--yellow-l:#fef9ee;
+  --gray:#6b7280;--gray-l:#f3f4f6;
+  --accent:#1b4332;--accent-l:#d8f3dc;
+  --shadow:0 2px 16px rgba(0,0,0,.08);
+  --radius:14px;--radius-sm:10px;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{font-family:'Rubik',sans-serif;background:var(--bg);color:var(--text);max-width:430px;margin:0 auto;min-height:100vh}
+.header{background:var(--surface);border-bottom:2px solid var(--border);padding:16px 16px 0;position:sticky;top:0;z-index:100;box-shadow:var(--shadow)}
+.header-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.logo{font-size:19px;font-weight:900;letter-spacing:-.5px}
+.logo span{color:var(--green-m)}
+.date-tag{background:var(--accent-l);color:var(--accent);border-radius:20px;padding:4px 11px;font-size:11px;font-weight:700}
+.progress-label{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);font-weight:600;margin-bottom:5px}
+.prog-count{font-weight:800;color:var(--green)}
+.progress-bar{height:5px;background:var(--border);border-radius:3px;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--green),var(--green-m));border-radius:3px;transition:width .4s}
+.prog-warn{font-size:11px;color:var(--yellow);font-weight:700;padding:4px 0 6px;text-align:center;opacity:0;transition:opacity .3s}
+.prog-warn.show{opacity:1}
+.tabs{display:flex;margin-top:8px}
+.tab{flex:1;padding:10px 4px;text-align:center;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;transition:all .2s}
+.tab.active{color:var(--green);border-bottom-color:var(--green)}
+.content{padding:14px 12px 110px}
+.cat-block{margin-bottom:12px;border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+.cat-header{display:flex;align-items:center;gap:8px;padding:11px 13px;background:var(--surface);cursor:pointer;user-select:none;border-bottom:1px solid var(--border)}
+.cat-emoji{font-size:18px}
+.cat-title{font-size:14px;font-weight:800;flex:1}
+.cat-badges{display:flex;gap:5px;flex-wrap:wrap}
+.cat-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px}
+.b-done{background:var(--green-l);color:var(--green)}
+.b-skip{background:var(--gray-l);color:var(--gray)}
+.b-need{background:var(--red-l);color:var(--red)}
+.b-left{background:var(--yellow-l);color:var(--yellow)}
+.cat-chev{font-size:10px;color:var(--muted);transition:transform .2s}
+.cat-header.open .cat-chev{transform:rotate(180deg)}
+.item{display:flex;align-items:center;gap:9px;padding:10px 13px;background:var(--surface);border-bottom:1px solid var(--border);transition:background .12s}
+.item:last-child{border-bottom:none}
+.item.s-yes{background:var(--green-l)}
+.item.s-no{background:var(--red-l)}
+.item.s-skip{background:var(--gray-l);opacity:.6}
+.status-btn{width:34px;height:34px;border-radius:50%;border:2px solid var(--border);background:var(--surface2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;transition:all .12s;font-family:'Rubik',sans-serif;font-weight:800}
+.status-btn.yes{border-color:var(--green);background:var(--green);color:#fff}
+.status-btn.no{border-color:var(--red);background:var(--red);color:#fff}
+.status-btn.skip{border-color:var(--gray);background:var(--gray);color:#fff;font-size:10px}
+.item-info{flex:1;min-width:0}
+.item-name{font-size:13px;font-weight:700}
+.item-sub{font-size:11px;color:var(--muted)}
+.status-label{font-size:10px;font-weight:800;padding:2px 7px;border-radius:20px;flex-shrink:0;white-space:nowrap}
+.sl-yes{background:var(--green-l);color:var(--green)}
+.sl-no{background:var(--red-l);color:var(--red)}
+.sl-skip{background:var(--gray-l);color:var(--gray)}
+.sl-unk{background:var(--yellow-l);color:var(--yellow)}
+.qty-wrap{display:flex;align-items:center;gap:5px;flex-shrink:0}
+.qty-btn{width:26px;height:26px;border-radius:50%;border:1.5px solid var(--border);background:var(--surface2);color:var(--text);font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1}
+.qty-num{font-size:14px;font-weight:800;min-width:20px;text-align:center}
+.legend{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 13px;margin-bottom:12px}
+.legend-title{font-size:11px;font-weight:700;color:var(--muted);margin-bottom:8px}
+.legend-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:var(--muted)}
+.ld{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;flex-shrink:0;font-weight:800}
+.ld-unk{background:var(--border);color:var(--muted)}
+.ld-yes{background:var(--green)}
+.ld-no{background:var(--red)}
+.ld-skip{background:var(--gray);font-size:9px}
+.add-form{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px;margin-bottom:12px}
+.add-form h3{font-size:14px;font-weight:800;margin-bottom:10px}
+.form-group{margin-bottom:8px}
+.form-label{font-size:11px;font-weight:700;color:var(--muted);margin-bottom:3px;display:block}
+.form-input{width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;padding:9px 11px;color:var(--text);font-family:'Rubik',sans-serif;font-size:13px;font-weight:600;outline:none;transition:border .2s}
+.form-input:focus{border-color:var(--green)}
+.form-select{width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;padding:9px 11px;color:var(--text);font-family:'Rubik',sans-serif;font-size:13px;font-weight:600;outline:none}
+.btn-add{width:100%;background:var(--green);color:#fff;border:none;border-radius:8px;padding:11px;font-weight:800;font-family:'Rubik',sans-serif;font-size:14px;cursor:pointer}
+.manage-item{display:flex;align-items:center;gap:9px;padding:9px 13px;background:var(--surface);border-bottom:1px solid var(--border)}
+.manage-item:last-child{border-bottom:none}
+.manage-name{flex:1;font-size:12px;font-weight:600}
+.btn-del{background:var(--red-l);border:1px solid var(--red);border-radius:6px;color:var(--red);padding:3px 9px;font-size:11px;cursor:pointer;font-family:'Rubik',sans-serif;font-weight:700}
+.bottom-bar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:var(--surface);border-top:1.5px solid var(--border);padding:10px 14px;display:flex;gap:8px;box-shadow:0 -4px 20px rgba(0,0,0,.08);z-index:50}
+.btn-reset{flex:1;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:11px;color:var(--muted);font-family:'Rubik',sans-serif;font-size:13px;font-weight:700;cursor:pointer}
+.btn-pdf{flex:2;background:linear-gradient(135deg,var(--green),var(--green-m));color:#fff;border:none;border-radius:10px;padding:11px;font-family:'Rubik',sans-serif;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 4px 14px rgba(45,106,79,.3)}
+.btn-pdf:disabled{background:#ccc;box-shadow:none;cursor:not-allowed}
+.toast{position:fixed;bottom:88px;left:50%;transform:translateX(-50%) translateY(8px);background:var(--text);color:#fff;border-radius:10px;padding:9px 18px;font-size:12px;font-weight:700;opacity:0;transition:all .25s;pointer-events:none;z-index:300;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.pdf-generating{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:500;display:none}
+.pdf-generating.show{display:flex}
+.pdf-spinner{background:#fff;border-radius:16px;padding:28px 32px;text-align:center}
+.pdf-spinner p{font-size:15px;font-weight:700;color:var(--green);margin-top:10px}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-top">
+    <div class="logo">🛒 Список <span>покупок</span></div>
+    <div class="date-tag" id="dateTag"></div>
+  </div>
+  <div class="progress-label"><span>Прогресс проверки</span><span class="prog-count" id="progText">0 / 0</span></div>
+  <div class="progress-bar"><div class="progress-fill" id="progFill" style="width:0%"></div></div>
+  <div class="prog-warn" id="progWarn">⚠️ Отметьте все товары перед созданием PDF</div>
+  <div class="tabs">
+    <div class="tab active" id="tab-list"   onclick="setTab('list')">📋 Список</div>
+    <div class="tab"        id="tab-manage" onclick="setTab('manage')">⚙️ Настройки</div>
+  </div>
+</div>
+
+<div class="content" id="content"></div>
+
+<div class="bottom-bar" id="bottomBar">
+  <button class="btn-reset" onclick="resetAll()">🔄 Новая неделя</button>
+  <button class="btn-pdf" id="btnPDF" onclick="tryPDF()">📄 Создать PDF</button>
+</div>
+
+<div class="pdf-generating" id="pdfOverlay">
+  <div class="pdf-spinner">
+    <div style="font-size:36px">⏳</div>
+    <p>Создаём PDF...</p>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const DEFAULTS=[
+  {cat:'🥬 Овощи и фрукты',name:'Помидоры',qty:1,note:''},
+  {cat:'🥬 Овощи и фрукты',name:'Огурцы',qty:1,note:''},
+  {cat:'🥬 Овощи и фрукты',name:'Картофель',qty:1,note:''},
+  {cat:'🥛 Молочные продукты',name:'Молоко 3%',qty:1,note:''},
+  {cat:'🥛 Молочные продукты',name:'Яйца',qty:1,note:'десяток'},
+  {cat:'🍞 Хлеб и выпечка',name:'Хлеб',qty:1,note:''},
+  {cat:'🥫 Бакалея',name:'Паста',qty:1,note:''},
+  {cat:'🧴 Бытовая химия',name:'Туалетная бумага',qty:1,note:''},
+  {cat:'🧴 Бытовая химия',name:'Средство для посуды',qty:1,note:''},
+  {cat:'👶 Детское',name:'Подгузники',qty:1,note:''},
+];
+
+const KEY='shopping_ru_v1';
+function loadState(){
+  try{const s=localStorage.getItem(KEY);if(s)return JSON.parse(s);}catch(e){}
+  return{items:DEFAULTS.map((d,i)=>({...d,id:'i'+i,status:'unchecked'})),catCollapsed:{}};
+}
+function save(){localStorage.setItem(KEY,JSON.stringify(state));updateProgress();}
+let state=loadState();
+let tab='list';
+
+// Дата
+const days=['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'];
+const d=new Date();
+document.getElementById('dateTag').textContent=days[d.getDay()]+', '+d.getDate()+'/'+(d.getMonth()+1);
+
+function updateProgress(){
+  const total=state.items.length;
+  const checked=state.items.filter(i=>i.status!=='unchecked').length;
+  const pct=total?Math.round(checked/total*100):0;
+  document.getElementById('progText').textContent=checked+' / '+total;
+  document.getElementById('progFill').style.width=pct+'%';
+  const done=checked===total;
+  document.getElementById('progWarn').classList.toggle('show',!done&&checked>0);
+  const btn=document.getElementById('btnPDF');
+  if(btn){btn.disabled=!done;btn.textContent=done?'📄 Создать PDF':'🔒 Осталось '+(total-checked);}
+}
+
+function setTab(t){
+  tab=t;
+  ['list','manage'].forEach(x=>document.getElementById('tab-'+x).classList.toggle('active',x===t));
+  document.getElementById('bottomBar').style.display=t==='manage'?'none':'flex';
+  render();
+}
+
+function render(){
+  const el=document.getElementById('content');
+  if(tab==='list')el.innerHTML=renderList();
+  else el.innerHTML=renderManage();
+}
+
+function groupBy(){const g={};state.items.forEach(i=>{if(!g[i.cat])g[i.cat]=[];g[i.cat].push(i);});return g;}
+function esc(s){return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'");}
+
+function renderList(){
+  let html=`<div class="legend">
+    <div class="legend-title">Нажмите на кружок рядом с товаром:</div>
+    <div class="legend-grid">
+      <div class="legend-item"><div class="ld ld-unk">?</div><span>Не проверено</span></div>
+      <div class="legend-item"><div class="ld ld-yes">✓</div><span>Есть дома</span></div>
+      <div class="legend-item"><div class="ld ld-no">✗</div><span>Нужно купить</span></div>
+      <div class="legend-item"><div class="ld ld-skip">—</div><span>На этой неделе нет</span></div>
+    </div>
+  </div>`;
+  const groups=groupBy();
+  Object.entries(groups).forEach(([cat,items])=>{
+    const done=items.filter(i=>i.status!=='unchecked').length;
+    const need=items.filter(i=>i.status==='no').length;
+    const skip=items.filter(i=>i.status==='skip').length;
+    const total=items.length;
+    const isOpen=!state.catCollapsed[cat];
+    html+=`<div class="cat-block">
+      <div class="cat-header ${isOpen?'open':''}" onclick="toggleCat('${esc(cat)}')">
+        <span class="cat-emoji">${cat.split(' ')[0]}</span>
+        <span class="cat-title">${cat.split(' ').slice(1).join(' ')}</span>
+        <div class="cat-badges">
+          <span class="cat-badge b-done">${done}/${total}</span>
+          ${need>0?`<span class="cat-badge b-need">${need} купить</span>`:''}
+          ${skip>0?`<span class="cat-badge b-skip">${skip} пропуск</span>`:''}
+          ${done<total?`<span class="cat-badge b-left">${total-done} осталось</span>`:''}
+        </div>
+        <span class="cat-chev">${isOpen?'▲':'▼'}</span>
+      </div>
+      ${isOpen?`<div>${items.map(renderItem).join('')}</div>`:''}
+    </div>`;
+  });
+  return html;
+}
+
+function renderItem(item){
+  const sc=item.status;
+  const cls=sc==='yes'?'s-yes':sc==='no'?'s-no':sc==='skip'?'s-skip':'';
+  const bc=sc==='yes'?'yes':sc==='no'?'no':sc==='skip'?'skip':'';
+  const bi=sc==='yes'?'✓':sc==='no'?'✗':sc==='skip'?'—':'?';
+  const sl=sc==='yes'?'sl-yes':sc==='no'?'sl-no':sc==='skip'?'sl-skip':'sl-unk';
+  const st=sc==='yes'?'Есть ✓':sc==='no'?'Купить':sc==='skip'?'Нет':' ';
+  return `<div class="item ${cls}">
+    <button class="status-btn ${bc}" onclick="cycle('${item.id}')">${bi}</button>
+    <div class="item-info">
+      <div class="item-name">${item.name}</div>
+      ${item.note?`<div class="item-sub">${item.note}</div>`:''}
+    </div>
+    <span class="status-label ${sl}">${st}</span>
+    <div class="qty-wrap">
+      <button class="qty-btn" onclick="chQty('${item.id}',-1)">−</button>
+      <span class="qty-num">${item.qty}</span>
+      <button class="qty-btn" onclick="chQty('${item.id}',1)">+</button>
+    </div>
+  </div>`;
+}
+
+function renderManage(){
+  const catOpts=[...new Set(DEFAULTS.map(i=>i.cat))].map(c=>`<option value="${c}">${c}</option>`).join('');
+  const groups=groupBy();
+  let blocks='';
+  Object.entries(groups).forEach(([cat,items])=>{
+    blocks+=`<div class="cat-block">
+      <div class="cat-header open" style="cursor:default">
+        <span class="cat-emoji">${cat.split(' ')[0]}</span>
+        <span class="cat-title">${cat.split(' ').slice(1).join(' ')}</span>
+      </div>
+      <div>${items.map(i=>`<div class="manage-item"><span class="manage-name">${i.name}${i.note?' · '+i.note:''}</span><button class="btn-del" onclick="removeItem('${i.id}')">Удалить</button></div>`).join('')}</div>
+    </div>`;
+  });
+  return `<div class="add-form">
+    <h3>➕ Добавить товар</h3>
+    <div class="form-group"><label class="form-label">Название товара</label><input class="form-input" id="nName" placeholder="Название"/></div>
+    <div class="form-group"><label class="form-label">Категория</label><select class="form-select" id="nCat">${catOpts}</select></div>
+    <div class="form-group"><label class="form-label">Примечание (необязательно)</label><input class="form-input" id="nNote" placeholder="Количество, марка..."/></div>
+    <button class="btn-add" onclick="addItem()">➕ Добавить</button>
+  </div>
+  <div style="margin-bottom:8px"><div style="font-size:12px;font-weight:800;color:var(--muted);padding:0 2px 8px">Все товары (${state.items.length})</div>${blocks}</div>`;
+}
+
+function toggleCat(cat){state.catCollapsed[cat]=!state.catCollapsed[cat];save();render();}
+
+function cycle(id){
+  const item=state.items.find(i=>i.id===id);if(!item)return;
+  const nxt={unchecked:'yes',yes:'no',no:'skip',skip:'unchecked'};
+  item.status=nxt[item.status];save();
+  const msgs={yes:'✅ '+item.name+' — есть дома',no:'🛒 '+item.name+' — нужно купить',skip:'⏭️ '+item.name+' — на этой неделе нет',unchecked:'↩️ '+item.name+' — не отмечено'};
+  showToast(msgs[item.status]);render();
+}
+
+function chQty(id,delta){const item=state.items.find(i=>i.id===id);if(!item)return;item.qty=Math.max(1,item.qty+delta);save();render();}
+
+function addItem(){
+  const name=document.getElementById('nName').value.trim();
+  const cat=document.getElementById('nCat').value;
+  const note=document.getElementById('nNote').value.trim();
+  if(!name){showToast('⚠️ Введите название');return;}
+  state.items.push({id:'i'+Date.now(),cat,name,qty:1,note,status:'unchecked'});
+  save();render();showToast('✅ '+name+' добавлен');
+}
+
+function removeItem(id){
+  const item=state.items.find(i=>i.id===id);
+  if(!item||!confirm('Удалить "'+item.name+'"?'))return;
+  state.items=state.items.filter(i=>i.id!==id);save();render();
+}
+
+function resetAll(){
+  if(!confirm('Сбросить все отметки для новой недели?'))return;
+  state.items.forEach(i=>i.status='unchecked');save();render();showToast('🔄 Список сброшен');
+}
+
+function tryPDF(){
+  const total=state.items.length;
+  const checked=state.items.filter(i=>i.status!=='unchecked').length;
+  if(checked<total){
+    showToast('🔒 Осталось '+(total-checked)+' товаров');
+    document.getElementById('progWarn').classList.add('show');
+    return;
+  }
+  generatePDF();
+}
+
+async function generatePDF(){
+  const need=state.items.filter(i=>i.status==='no');
+  if(!need.length){showToast('🎉 Всё есть дома!');return;}
+
+  document.getElementById('pdfOverlay').classList.add('show');
+
+  try {
+    const {jsPDF} = window.jspdf;
+    const doc = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+
+    const date=document.getElementById('dateTag').textContent;
+    const groups=groupBy();
+    const pageW=210;
+    const margin=15;
+    const contentW=pageW-margin*2;
+
+    // ── Шапка ──────────────────────────────────────────
+    doc.setFillColor(45,106,79);
+    doc.roundedRect(margin,10,contentW,22,3,3,'F');
+    doc.setTextColor(255,255,255);
+    doc.setFontSize(16);
+    doc.setFont('helvetica','bold');
+    doc.text('Shopping List',pageW/2,20,{align:'center'});
+    doc.setFontSize(9);
+    doc.setFont('helvetica','normal');
+    doc.text(date+' · '+need.length+' items to buy',pageW/2,27,{align:'center'});
+
+    let y=40;
+    doc.setTextColor(26,46,36);
+
+    Object.entries(groups).forEach(([cat,items])=>{
+      const n=items.filter(i=>i.status==='no');
+      if(!n.length) return;
+
+      // проверка места на странице
+      if(y>260){doc.addPage();y=15;}
+
+      // Категория
+      const catName=cat.split(' ').slice(1).join(' ');
+      const emoji=cat.split(' ')[0];
+      doc.setFillColor(216,243,220);
+      doc.roundedRect(margin,y,contentW,8,2,2,'F');
+      doc.setFontSize(10);
+      doc.setFont('helvetica','bold');
+      doc.setTextColor(27,67,50);
+      doc.text(emoji+' '+catName,margin+3,y+5.5);
+      y+=11;
+
+      // Товары
+      n.forEach((it,idx)=>{
+        if(y>270){doc.addPage();y=15;}
+        const bg=idx%2===0?[247,251,249]:[255,255,255];
+        doc.setFillColor(...bg);
+        doc.rect(margin,y,contentW,8,'F');
+
+        // чекбокс
+        doc.setDrawColor(180,180,180);
+        doc.rect(margin+2,y+2,4,4);
+
+        // название
+        doc.setFontSize(9);
+        doc.setFont('helvetica','normal');
+        doc.setTextColor(26,46,36);
+        let txt=it.name;
+        if(it.note) txt+=' ('+it.note+')';
+        doc.text(txt,margin+9,y+5.5);
+
+        // количество
+        if(it.qty>1){
+          doc.setFont('helvetica','bold');
+          doc.setTextColor(45,106,79);
+          doc.text('×'+it.qty,margin+contentW-8,y+5.5,{align:'right'});
+        }
+
+        // разделитель
+        doc.setDrawColor(212,232,222);
+        doc.line(margin,y+8,margin+contentW,y+8);
+        y+=8;
+      });
+      y+=4;
+    });
+
+    // подвал
+    if(y>270){doc.addPage();y=15;}
+    doc.setFillColor(216,243,220);
+    doc.roundedRect(margin,y,contentW,10,2,2,'F');
+    doc.setFontSize(8);
+    doc.setFont('helvetica','normal');
+    doc.setTextColor(107,144,128);
+    doc.text('Created by Family Shopping App · '+date,pageW/2,y+6,{align:'center'});
+
+    // сохранение
+    doc.save('shopping-list-'+date.replace(/[,\s\/]+/g,'-')+'.pdf');
+    showToast('✅ PDF сохранён!');
+
+  } catch(e){
+    showToast('❌ Ошибка: '+e.message);
+    console.error(e);
+  } finally {
+    document.getElementById('pdfOverlay').classList.remove('show');
+  }
+}
+
+let tt;
+function showToast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.classList.add('show');
+  clearTimeout(tt);tt=setTimeout(()=>el.classList.remove('show'),2500);
+}
+
+render();
+updateProgress();
+if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js'); }
+</script>
+</body>
+</html>
