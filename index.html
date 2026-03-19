@@ -114,7 +114,7 @@ body{font-family:'Rubik',sans-serif;background:var(--bg);color:var(--text);max-w
   </div>
   <div class="progress-label"><span>Прогресс проверки</span><span class="prog-count" id="progText">0 / 0</span></div>
   <div class="progress-bar"><div class="progress-fill" id="progFill" style="width:0%"></div></div>
-  <div class="prog-warn" id="progWarn">⚠️ Отметьте все товары перед созданием PDF</div>
+  <div class="prog-warn" id="progWarn">⚠️ Отметьте все товары перед отправкой в WhatsApp</div>
   <div class="tabs">
     <div class="tab active" id="tab-list"   onclick="setTab('list')">📋 Список</div>
     <div class="tab"        id="tab-manage" onclick="setTab('manage')">⚙️ Настройки</div>
@@ -125,7 +125,7 @@ body{font-family:'Rubik',sans-serif;background:var(--bg);color:var(--text);max-w
 
 <div class="bottom-bar" id="bottomBar">
   <button class="btn-reset" onclick="resetAll()">🔄 Новая неделя</button>
-  <button class="btn-pdf" id="btnPDF" onclick="tryPDF()">📄 Создать PDF</button>
+  <button class="btn-pdf" id="btnPDF" onclick="tryPDF()">📲 Отправить в WhatsApp</button>
 </div>
 
 <div class="pdf-generating" id="pdfOverlay">
@@ -174,7 +174,7 @@ function updateProgress(){
   const done=checked===total;
   document.getElementById('progWarn').classList.toggle('show',!done&&checked>0);
   const btn=document.getElementById('btnPDF');
-  if(btn){btn.disabled=!done;btn.textContent=done?'📄 Создать PDF':'🔒 Осталось '+(total-checked);}
+  if(btn){btn.disabled=!done;btn.textContent=done?'📲 Отправить в WhatsApp':'🔒 Осталось '+(total-checked);}
 }
 
 function setTab(t){
@@ -323,51 +323,28 @@ async function generatePDF(){
   const groups=groupBy();
   const date=document.getElementById('dateTag').textContent;
 
-  let rows='';
+  let msg=`🛒 *Список покупок* — ${date}\n`;
+  msg+=`Итого: ${need.length} товаров\n`;
+  msg+=`${'─'.repeat(22)}\n`;
+
   Object.entries(groups).forEach(([cat,items])=>{
     const n=items.filter(i=>i.status==='no');
     if(!n.length) return;
-    rows+=`<div style="margin-bottom:18px">
-      <div style="background:#2d6a4f;color:#fff;padding:8px 14px;border-radius:8px 8px 0 0;font-size:14px;font-weight:800">${cat}</div>
-      <table style="width:100%;border-collapse:collapse;border:1px solid #d4e8de;border-top:none;border-radius:0 0 8px 8px;overflow:hidden">
-        ${n.map((it,idx)=>`
-        <tr style="background:${idx%2===0?'#f0f7f4':'#fff'}">
-          <td style="padding:9px 14px;font-size:13px;font-weight:600;border-bottom:1px solid #d4e8de">${it.name}${it.note?' <span style="color:#6b9080;font-size:11px">(${it.note})</span>':''}</td>
-          <td style="padding:9px 14px;text-align:center;font-size:13px;font-weight:800;color:#2d6a4f;border-bottom:1px solid #d4e8de;width:50px">${it.qty>1?'×'+it.qty:''}</td>
-          <td style="padding:9px 14px;text-align:center;border-bottom:1px solid #d4e8de;width:40px"><div style="width:16px;height:16px;border:2px solid #aaa;border-radius:3px;margin:0 auto"></div></td>
-        </tr>`).join('')}
-      </table>
-    </div>`;
+    msg+=`\n*${cat}*\n`;
+    n.forEach(it=>{
+      msg+=`□ ${it.name}`;
+      if(it.qty>1) msg+=` ×${it.qty}`;
+      if(it.note) msg+=` _(${it.note})_`;
+      msg+='\n';
+    });
   });
 
-  const html=`<!DOCTYPE html>
-  <html lang="ru"><head><meta charset="UTF-8">
-  <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <style>
-    *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:'Rubik',Arial,sans-serif;background:#fff;color:#1a2e24;padding:20px;max-width:600px;margin:0 auto}
-    .no-print{text-align:center;margin-bottom:16px}
-    @media print{.no-print{display:none}body{padding:10px}}
-  </style></head><body>
-  <div class="no-print">
-    <button onclick="window.print()" style="background:#2d6a4f;color:#fff;border:none;padding:11px 28px;border-radius:8px;font-family:Rubik,Arial;font-size:15px;font-weight:800;cursor:pointer;margin-left:8px">🖨️ Сохранить как PDF</button>
-    <button onclick="window.close()" style="background:#f0f7f4;color:#6b9080;border:1px solid #d4e8de;padding:11px 18px;border-radius:8px;font-family:Rubik,Arial;font-size:15px;font-weight:700;cursor:pointer">Закрыть</button>
-  </div>
-  <div style="background:linear-gradient(135deg,#1b4332,#2d6a4f);color:#fff;border-radius:12px;padding:20px 24px;margin-bottom:22px;text-align:center">
-    <div style="font-size:22px;font-weight:900;margin-bottom:4px">🛒 Список покупок</div>
-    <div style="font-size:13px;opacity:.85">${date} · ${need.length} товаров к покупке</div>
-  </div>
-  ${rows}
-  <div style="margin-top:20px;padding:12px;background:#d8f3dc;border-radius:8px;text-align:center;font-size:11px;color:#2d6a4f">
-    Создано семейным приложением покупок · ${date}
-  </div>
-  </body></html>`;
+  msg+=`\n${'─'.repeat(22)}\n`;
+  msg+=`_Семейное приложение покупок_`;
 
-  const win=window.open('','_blank');
-  if(!win){showToast('❌ Разрешите всплывающие окна!');return;}
-  win.document.write(html);
-  win.document.close();
-  showToast('📄 Откройте и сохраните как PDF');
+  const url='https://wa.me/?text='+encodeURIComponent(msg);
+  window.open(url,'_blank');
+  showToast('📲 Открываем WhatsApp!');
 }
 
 let tt;
