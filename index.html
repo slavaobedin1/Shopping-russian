@@ -320,103 +320,54 @@ async function generatePDF(){
   const need=state.items.filter(i=>i.status==='no');
   if(!need.length){showToast('🎉 Всё есть дома!');return;}
 
-  document.getElementById('pdfOverlay').classList.add('show');
+  const groups=groupBy();
+  const date=document.getElementById('dateTag').textContent;
 
-  try {
-    const {jsPDF} = window.jspdf;
-    const doc = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  let rows='';
+  Object.entries(groups).forEach(([cat,items])=>{
+    const n=items.filter(i=>i.status==='no');
+    if(!n.length) return;
+    rows+=`<div style="margin-bottom:18px">
+      <div style="background:#2d6a4f;color:#fff;padding:8px 14px;border-radius:8px 8px 0 0;font-size:14px;font-weight:800">${cat}</div>
+      <table style="width:100%;border-collapse:collapse;border:1px solid #d4e8de;border-top:none;border-radius:0 0 8px 8px;overflow:hidden">
+        ${n.map((it,idx)=>`
+        <tr style="background:${idx%2===0?'#f0f7f4':'#fff'}">
+          <td style="padding:9px 14px;font-size:13px;font-weight:600;border-bottom:1px solid #d4e8de">${it.name}${it.note?' <span style="color:#6b9080;font-size:11px">(${it.note})</span>':''}</td>
+          <td style="padding:9px 14px;text-align:center;font-size:13px;font-weight:800;color:#2d6a4f;border-bottom:1px solid #d4e8de;width:50px">${it.qty>1?'×'+it.qty:''}</td>
+          <td style="padding:9px 14px;text-align:center;border-bottom:1px solid #d4e8de;width:40px"><div style="width:16px;height:16px;border:2px solid #aaa;border-radius:3px;margin:0 auto"></div></td>
+        </tr>`).join('')}
+      </table>
+    </div>`;
+  });
 
-    const date=document.getElementById('dateTag').textContent;
-    const groups=groupBy();
-    const pageW=210;
-    const margin=15;
-    const contentW=pageW-margin*2;
+  const html=`<!DOCTYPE html>
+  <html lang="ru"><head><meta charset="UTF-8">
+  <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Rubik',Arial,sans-serif;background:#fff;color:#1a2e24;padding:20px;max-width:600px;margin:0 auto}
+    .no-print{text-align:center;margin-bottom:16px}
+    @media print{.no-print{display:none}body{padding:10px}}
+  </style></head><body>
+  <div class="no-print">
+    <button onclick="window.print()" style="background:#2d6a4f;color:#fff;border:none;padding:11px 28px;border-radius:8px;font-family:Rubik,Arial;font-size:15px;font-weight:800;cursor:pointer;margin-left:8px">🖨️ Сохранить как PDF</button>
+    <button onclick="window.close()" style="background:#f0f7f4;color:#6b9080;border:1px solid #d4e8de;padding:11px 18px;border-radius:8px;font-family:Rubik,Arial;font-size:15px;font-weight:700;cursor:pointer">Закрыть</button>
+  </div>
+  <div style="background:linear-gradient(135deg,#1b4332,#2d6a4f);color:#fff;border-radius:12px;padding:20px 24px;margin-bottom:22px;text-align:center">
+    <div style="font-size:22px;font-weight:900;margin-bottom:4px">🛒 Список покупок</div>
+    <div style="font-size:13px;opacity:.85">${date} · ${need.length} товаров к покупке</div>
+  </div>
+  ${rows}
+  <div style="margin-top:20px;padding:12px;background:#d8f3dc;border-radius:8px;text-align:center;font-size:11px;color:#2d6a4f">
+    Создано семейным приложением покупок · ${date}
+  </div>
+  </body></html>`;
 
-    // ── Шапка ──────────────────────────────────────────
-    doc.setFillColor(45,106,79);
-    doc.roundedRect(margin,10,contentW,22,3,3,'F');
-    doc.setTextColor(255,255,255);
-    doc.setFontSize(16);
-    doc.setFont('helvetica','bold');
-    doc.text('Shopping List',pageW/2,20,{align:'center'});
-    doc.setFontSize(9);
-    doc.setFont('helvetica','normal');
-    doc.text(date+' · '+need.length+' items to buy',pageW/2,27,{align:'center'});
-
-    let y=40;
-    doc.setTextColor(26,46,36);
-
-    Object.entries(groups).forEach(([cat,items])=>{
-      const n=items.filter(i=>i.status==='no');
-      if(!n.length) return;
-
-      // проверка места на странице
-      if(y>260){doc.addPage();y=15;}
-
-      // Категория
-      const catName=cat.split(' ').slice(1).join(' ');
-      const emoji=cat.split(' ')[0];
-      doc.setFillColor(216,243,220);
-      doc.roundedRect(margin,y,contentW,8,2,2,'F');
-      doc.setFontSize(10);
-      doc.setFont('helvetica','bold');
-      doc.setTextColor(27,67,50);
-      doc.text(emoji+' '+catName,margin+3,y+5.5);
-      y+=11;
-
-      // Товары
-      n.forEach((it,idx)=>{
-        if(y>270){doc.addPage();y=15;}
-        const bg=idx%2===0?[247,251,249]:[255,255,255];
-        doc.setFillColor(...bg);
-        doc.rect(margin,y,contentW,8,'F');
-
-        // чекбокс
-        doc.setDrawColor(180,180,180);
-        doc.rect(margin+2,y+2,4,4);
-
-        // название
-        doc.setFontSize(9);
-        doc.setFont('helvetica','normal');
-        doc.setTextColor(26,46,36);
-        let txt=it.name;
-        if(it.note) txt+=' ('+it.note+')';
-        doc.text(txt,margin+9,y+5.5);
-
-        // количество
-        if(it.qty>1){
-          doc.setFont('helvetica','bold');
-          doc.setTextColor(45,106,79);
-          doc.text('×'+it.qty,margin+contentW-8,y+5.5,{align:'right'});
-        }
-
-        // разделитель
-        doc.setDrawColor(212,232,222);
-        doc.line(margin,y+8,margin+contentW,y+8);
-        y+=8;
-      });
-      y+=4;
-    });
-
-    // подвал
-    if(y>270){doc.addPage();y=15;}
-    doc.setFillColor(216,243,220);
-    doc.roundedRect(margin,y,contentW,10,2,2,'F');
-    doc.setFontSize(8);
-    doc.setFont('helvetica','normal');
-    doc.setTextColor(107,144,128);
-    doc.text('Created by Family Shopping App · '+date,pageW/2,y+6,{align:'center'});
-
-    // сохранение
-    doc.save('shopping-list-'+date.replace(/[,\s\/]+/g,'-')+'.pdf');
-    showToast('✅ PDF сохранён!');
-
-  } catch(e){
-    showToast('❌ Ошибка: '+e.message);
-    console.error(e);
-  } finally {
-    document.getElementById('pdfOverlay').classList.remove('show');
-  }
+  const win=window.open('','_blank');
+  if(!win){showToast('❌ Разрешите всплывающие окна!');return;}
+  win.document.write(html);
+  win.document.close();
+  showToast('📄 Откройте и сохраните как PDF');
 }
 
 let tt;
