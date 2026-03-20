@@ -257,7 +257,10 @@ function renderItem(item){
 }
 
 function renderManage(){
-  const allCats=[...new Set(state.items.map(i=>i.cat))];
+  const allCats=[...new Set([
+    ...state.items.map(i=>i.cat),
+    ...(state.customCats||[])
+  ])];
   const catOpts=allCats.map(c=>`<option value="${c}">${c}</option>`).join('');
   const groups=groupBy();
 
